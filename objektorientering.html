@@ -1,0 +1,303 @@
+<script src="http://spelprogrammering.nu/simple.js">
+
+// här skapar vi namn och startvärden för variabler
+// vi döljer musen
+// vi bestämmer färger för sådant som ska kunna skjutas
+function start()
+{
+  // skapa en lista för objects
+  objects = [];
+
+  // skapar en lista för döda objects
+  deadObjects = [];
+
+  // sätt variablen clock till 0
+  clock = 0;
+
+  // sätt variablen spawn till 30
+  // spawn är tiden mellan varje ny object
+  // (objekten skapas utanför skärmen
+  // och rör sig mot mitten)
+  spawn = 30;
+
+  // sätt variablen bulletsFired till 0
+  bulletsFired = 0;
+
+  // sätt variabeln objectsKilled till 0
+  objectsKilled = 0;
+
+  // gör muspekaren osynlig; showMouse() kan visa den
+  hideMouse();
+
+  // krävs för att träffa objects; ritar en cirkel uppe till vänster
+  // första färgen som används för att kunna träffa objects
+  circle(10, 10, 10, "lightgreen");
+  // andra färgen som används för att kunna träffa objects
+  circle(30, 10, 10, "gray");
+
+  // sätt variablen objectColor1 till pixelfärgen för x=10 och y=10
+  // 10, 10 används för att ta stickprov på färgen där
+  // stickprov = (eng.) sampling
+  objectColor1 = getPixel(10, 10);
+  objectColor2 = getPixel(30, 10);
+
+  // fyller skärmen med vald färg
+  // dock försvinner den pga det som ligger i update()
+  //fill("red");
+}
+
+function update()
+{
+  // ger ingen uppenbar effekt
+  //fill("purple");
+
+  // skapar en rektangel över hela ytan
+  rectangle(0, 0, totalWidth, totalHeight, "purple");
+
+  // ritar över tidigare rektangel med en ny
+  rectangle(0, totalHeight / 2, totalWidth, totalHeight-300, "blue");
+
+  // spara aktuell inställning för koordinatsystem
+  save();
+
+  // vad förflyttar denna raden?
+  //translate(totalWidth / 2 - 370, totalHeight / 2 - 300);
+
+  // här återställer vi sparat koordinatsystem
+  restore();
+
+  // ritar en rektangel i mitten
+  // rectangle(totalWidth / 2 + 32, totalHeight / 2 - 78, 13, 10, "#ff0");
+
+  // rectangle(totalWidth / 2 + 37, totalHeight / 2 - 83, 2, 7, "black");
+  // ritar en cirkel
+  // circle(totalWidth / 2 + 38, totalHeight / 2 - 72, 3, "yellow");
+
+  // uppdatera visningen av dödade objects
+  for (var i = 0; i < deadObjects.length; i++)
+  {
+    var object = deadObjects[i];
+    object.update();
+  }
+
+  // uppdatera visningen av levande objects
+  for (var i = 0; i < objects.length; i++)
+  {
+    var object = objects[i];
+
+    // om inte en object är död
+    if (! object.dead)
+    {
+      object.update();
+
+      pixel = getPixel(mouse.x, mouse.y);
+
+      // testa om spelaren lyckas skjuta objectn
+      // om muspekarens färg är samma som objectns färg:
+      // · rita en röd cirkel
+      // · sätt objectn som död
+      // · flytta objectn i sidled
+      // · rotera objectn
+      // · öka objectsKilled
+      // · lägg till en object i listan över döda objects
+      if (mouse.left &&
+          pixel.red == objectColor1.red &&
+          pixel.green == objectColor1.green &&
+          pixel.blue == objectColor1.blue
+          ||
+	  // andra färgen som används för att träffa objects
+          mouse.left &&
+          pixel.red == objectColor2.red &&
+          pixel.green == objectColor2.green &&
+          pixel.blue == objectColor2.blue
+	  )
+      {
+        // rita en cirkel vid träff
+        circle(mouse.x, mouse.y, 100, "yellow");
+
+        // sätt död till sant
+        object.dead = true;
+
+        // förflytta objektet relativt
+        // kom ihåg att -x är framåt för objektet
+        object.x += 100 + random(100);
+
+        // rotera objektet
+        object.deadAngle = random(0);
+
+        // räkna upp variablen
+        objectsKilled++;
+
+        // öka listan med döda objects med denna
+        deadObjects.push(object);
+      }
+
+      // när objektet befinner sig nära basen
+      if (object.x < 50)
+      {
+        // anropa funktionen blast med argumenten
+        blast(totalWidth / 2, totalHeight / 2, 100, 50, "yellow");
+        blast(totalWidth / 2, totalHeight / 2, 80, 30, "orange");
+        // skriv ut text på skärmen
+        text(totalWidth / 2 - 200, totalHeight * 0.8, 30,
+             "GAME OVER", "white");
+        // sluta uppdatera visningen
+        stopUpdate();
+      }
+    }
+  }
+
+  // rita linjer för skotten
+  if (mouse.x > 0 && mouse.left && random(3) == 0)
+  {
+    //circle(totalWidth / 2 + 38, totalHeight / 2 - 72, 4, "yellow");
+    // rita linjen från basen till musens position
+    line(totalWidth / 2 + 38, totalHeight / 2 - 70,
+         mouse.x, mouse.y, 2, "yellow");
+  }
+
+  // här ändrar vi siktet
+  ring(mouse.x, mouse.y, 30, 3, "white");
+  line(mouse.x - 30, mouse.y, mouse.x - 5, mouse.y, 10, "white");
+  line(mouse.x + 30, mouse.y, mouse.x + 5, mouse.y, 10, "white");
+  line(mouse.x, mouse.y - 30, mouse.x, mouse.y - 5, 10, "white");
+  line(mouse.x, mouse.y + 30, mouse.x, mouse.y + 5, 10, "white");
+
+  // när vänster mus trycks
+  if (mouse.left)
+  {
+    // anropa funktionen blast som ritar flera bollar med angiven färg
+    blast(mouse.x, mouse.y, 20, 10, "red");
+    // räkna upp variablen bulletsFired
+    bulletsFired++;
+  }
+
+  // kontrollera när ett nytt objekt ska läggas i listan för objects och ritas
+  if (clock > spawn)
+  {
+    clock = 0;
+    if (clock % spawn == 0)
+    { spawn *= 0.999 };
+    objects.push(new Object());
+  }
+
+  // öka värdet för variabeln clock
+  clock++;
+}
+
+// Funktion som ritar splitter
+// använder cirklar
+// Denna funktion tar emot fem argument (lägg märke till antal komman)
+// Bra för att man kan skricka olika värden till funktionen
+function blast(x, y, radius, fragments, color)
+{
+  // spara aktuellt koordinatsystem
+  save();
+
+  // ta emot första och andra värdet från argumentlistan)
+  translate(x, y);
+
+  // rita en cirkel enligt nya koordinatsystemet som är x och y
+  // använd radius och color som togs emot av funktionen
+  circle(0, 0, radius/10, color);
+
+  // rita så många fragment som man har beställt till funktionen
+  for (var i = 0; i < fragments; i++)
+  {
+    // slumpa en rotation i koordinatsystemet
+    rotate(random(360));
+
+    // circle(x, y, radie, färg)
+    circle(random(radius), 0, random(radius/5), color);
+  }
+  // återställ sparat koordinatsystem;
+  restore();
+}
+
+// Klassen som skapar objectobjekt
+// Detta är en konstruktor eller ritning för alla objectobjekt
+// tar emot argument för x-position, hastighet och vinkel
+function Object(x, speed, angle)
+{
+  // startvärdet för x, kom ihåg att -x är framåt
+  // anropa funktionen distance och mät avståndet mellan två punkter
+  // vi mäter avståndet från fönstrets övre vänstra hörn till 100 pixlar under mitten
+  this.x = distance(0, 0, totalWidth / 2, totalHeight / 2) - 100;
+  // y-värdet som skapas för objektet
+  this.y = 0;
+  // sätt speed för objektet som skapas
+  this.speed = 1 + random(1);
+  // sätt angle (vinkel) för objektet som skapas
+  this.angle = 15 + random(150);
+  // säg till att objektet som skapas inte ska vara död
+  this.dead = false;
+
+  this.objectColor = "lightgreen";
+
+  // från denna del skapas uppdateringsfunktionen för objektet
+  // det är den del som körs så länge objektet lever
+  this.update = function()
+  {
+    save();
+    // förflytta koordinatsystemet till mitten på skärmen
+    translate(totalWidth / 2, totalHeight / 2);
+
+    rotate(this.angle);
+    translate(this.x, this.y);
+
+    // om variablen dead är true
+    if (this.dead)
+    {
+      // färgen objekten ska ha när de är döda
+      this.objectColor = "purple";
+
+      // vinkeln objektet ska ha när det dör
+      rotate(this.deadAngle);
+    }
+    // dvs. variablen dead är false
+    else
+    {
+      // -= betyder minska befintligt värde med följande
+      // speed är samma sak som en hastighetsmätare eller gaspedal
+      this.x -= this.speed;
+      // vänd vertikalt
+      // objekt som pekar neråt
+      if (this.angle > 90 && this.angle < 270)
+      { scale(1, -1) };
+    }
+
+    // scale(1, 1);
+    // om objektets "dead" är sant
+    if (this.dead)
+    {
+      // spara koordinatsystem
+      save();
+
+      // en for-loop
+      // start, så länge som, efter varvet
+      for (var i = 0; i < 10; i++)
+      {
+        // modulus
+        // gör så objekt pekar olika
+        rotate(this.deadAngle % (i * 20));
+
+        // circle(X, Y, radie, färg)
+        // skapas när objektet dör
+        circle(3 * i, 0, 3 * i, "purple");
+      }
+      // återställer koordinatsystemet
+      restore();
+    }
+    // om objektet lever
+    // fortsätter koden här
+
+    // ritar levande objektets utseende
+    // triangle(x1,y1,x2,y2,x3,y3,färg)
+    triangle(0, 0, -50, 50, 0, 100, this.objectColor);
+
+    // återställer koordinatsystemet
+    restore();
+  };
+}
+
+</script>
